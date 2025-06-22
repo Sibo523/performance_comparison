@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-benchmark.py  -  Section א performance driver
+benchmark.py  -  Section  performance driver
 
 • Generates Erdős-Rényi graphs G(n, p)
 • Runs:

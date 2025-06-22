@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
 plot_results.py - pretty plots from output/benchmarks.csv
-• collapses repetitions (mean ± std)
+• collapses repetitions (mean std)
 • draws error bars
 • distinct markers + line styles (LP is dotted)
 """
