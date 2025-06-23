@@ -1,4 +1,3 @@
-// minimal_fraction_max_matching.cpp
 // Faithful C++17 port of Roi Sibony’s Python implementation
 // Compile:  g++ -std=c++17 -O2 minimal_fraction_max_matching.cpp
 
@@ -54,7 +53,7 @@ public:
         std::unordered_map<EdgeKey, double, EdgeKeyHash>;   // (u,v) ↦ 0,0.5,1
 
     Matching solve() {
-        for (;;) {
+        while(true) {
             init_labels();                    // Step 1
             bool augmented = false;
 
@@ -140,7 +139,7 @@ private:
         return path;
     }
 
-    // FIXED build_cycle -------------------------------------------------------
+    // build_cycle -------------------------------------------------------
     static std::vector<Vertex>
     build_cycle(const std::vector<Vertex>& path_u,
                 const std::vector<Vertex>& path_v)

@@ -328,37 +328,37 @@ class FractionalMatchingSolver:
                 log.error("No cycle found in type-2 augmentation step. This should not happen.")
                 return False
 
-def solve_fractional_matching_lp(G):
-    """
-    Solve the fractional matching problem using linear programming.
-    Constrains edge values to be in {0, 0.5, 1}.
-    Returns a dictionary mapping edges to their assigned value.
-    """
-    prob = pulp.LpProblem("FractionalMatching", pulp.LpMaximize)
-    edges = list(G.edges())
-    edge_vars = {}
-    for u, v in edges:
-        edge_vars[(u, v, 0)] = pulp.LpVariable(f"x_{u}_{v}_0", cat=pulp.LpBinary)
-        edge_vars[(u, v, 0.5)] = pulp.LpVariable(f"x_{u}_{v}_0.5", cat=pulp.LpBinary)
-        edge_vars[(u, v, 1)] = pulp.LpVariable(f"x_{u}_{v}_1", cat=pulp.LpBinary)
-        prob += edge_vars[(u, v, 0)] + edge_vars[(u, v, 0.5)] + edge_vars[(u, v, 1)] == 1
-    prob += pulp.lpSum([0.5 * edge_vars[(u, v, 0.5)] + 1 * edge_vars[(u, v, 1)] for u, v in edges])
-    for node in G.nodes():
-        incident_edges = [(u, v) for u, v in edges if u == node or v == node]
-        prob += pulp.lpSum([0.5 * edge_vars[(u, v, 0.5)] + 1 * edge_vars[(u, v, 1)] 
-                            for u, v in incident_edges]) <= 1
-    prob.solve(pulp.PULP_CBC_CMD(msg=False))
-    if prob.status != pulp.LpStatusOptimal:
-        return {}
-    result = {}
-    for u, v in edges:
-        if edge_vars[(u, v, 1)].value() > 0.5:
-            result[(u, v)] = 1.0
-        elif edge_vars[(u, v, 0.5)].value() > 0.5:
-            result[(u, v)] = 0.5
-        else:
-            result[(u, v)] = 0.0
-    return result
+# def solve_fractional_matching_lp(G):
+#     """
+#     Solve the fractional matching problem using linear programming.
+#     Constrains edge values to be in {0, 0.5, 1}.
+#     Returns a dictionary mapping edges to their assigned value.
+#     """
+#     prob = pulp.LpProblem("FractionalMatching", pulp.LpMaximize)
+#     edges = list(G.edges())
+#     edge_vars = {}
+#     for u, v in edges:
+#         edge_vars[(u, v, 0)] = pulp.LpVariable(f"x_{u}_{v}_0", cat=pulp.LpBinary)
+#         edge_vars[(u, v, 0.5)] = pulp.LpVariable(f"x_{u}_{v}_0.5", cat=pulp.LpBinary)
+#         edge_vars[(u, v, 1)] = pulp.LpVariable(f"x_{u}_{v}_1", cat=pulp.LpBinary)
+#         prob += edge_vars[(u, v, 0)] + edge_vars[(u, v, 0.5)] + edge_vars[(u, v, 1)] == 1
+#     prob += pulp.lpSum([0.5 * edge_vars[(u, v, 0.5)] + 1 * edge_vars[(u, v, 1)] for u, v in edges])
+#     for node in G.nodes():
+#         incident_edges = [(u, v) for u, v in edges if u == node or v == node]
+#         prob += pulp.lpSum([0.5 * edge_vars[(u, v, 0.5)] + 1 * edge_vars[(u, v, 1)] 
+#                             for u, v in incident_edges]) <= 1
+#     prob.solve(pulp.PULP_CBC_CMD(msg=False))
+#     if prob.status != pulp.LpStatusOptimal:
+#         return {}
+#     result = {}
+#     for u, v in edges:
+#         if edge_vars[(u, v, 1)].value() > 0.5:
+#             result[(u, v)] = 1.0
+#         elif edge_vars[(u, v, 0.5)].value() > 0.5:
+#             result[(u, v)] = 0.5
+#         else:
+#             result[(u, v)] = 0.0
+#     return result
 
 # def solve_fractional_matching_lp(G: nx.Graph) -> Dict[Tuple[Any, Any], float]:
 #     """
@@ -399,3 +399,74 @@ def solve_fractional_matching_lp(G):
 # ---------------------------------------------------------------
 def matching_value(matching: Dict[Tuple[Any, Any], float]) -> float:
     return sum(matching.values())
+
+def solve_fractional_matching_lp(G: nx.Graph) -> Dict[Tuple[Any, Any], float]:
+    """
+    Solve the fractional matching problem using pure Linear Programming.
+    Values can be any real number between 0 and 1, but are typically
+    restricted to {0, 0.5, 1} at optimal solutions.
+    """
+    try:
+        import cvxpy as cp
+    except ImportError:
+        raise ImportError("CVXPY is required. Install with: pip install cvxpy")
+    
+    # Get edges in canonical order
+    edges = list(G.edges())
+    edges = [(min(u, v), max(u, v)) for u, v in edges]
+    
+    if not edges:
+        return {}
+    
+    # Create one continuous variable per edge with bounds [0, 1]
+    n_edges = len(edges)
+    x = cp.Variable(n_edges)
+    
+    # Create constraints
+    constraints = []
+    
+    # Edge values must be between 0 and 1
+    constraints.append(0 <= x)
+    constraints.append(x <= 1)
+    
+    # For each vertex, sum of incident edge values must not exceed 1
+    for v in G.nodes():
+        incident_indices = []
+        for i, (u, w) in enumerate(edges):
+            if u == v or w == v:
+                incident_indices.append(i)
+        
+        if incident_indices:  # Only add constraint if vertex has edges
+            incident_sum = cp.sum([x[i] for i in incident_indices])
+            constraints.append(incident_sum <= 1)
+    
+    # Objective: maximize the sum of edge values
+    objective = cp.Maximize(cp.sum(x))
+    
+    # Create and solve the problem
+    prob = cp.Problem(objective, constraints)
+    try:
+        prob.solve(verbose=False)
+    except Exception as e:
+        log.error(f"CVXPY solver error: {e}")
+        return {}
+    
+    # Check if the problem was solved successfully
+    if prob.status != 'optimal':
+        log.warning("LP did not reach optimality; returning empty dict.")
+        return {}
+    
+    # Create result dictionary - only include non-zero values
+    # Rounding to handle floating point issues
+    result = {}
+    for i, (u, v) in enumerate(edges):
+        val = x[i].value
+        if val > 1e-6:  # Ignore very small values that are essentially zero
+            if abs(val - 0.5) < 1e-6:
+                result[(u, v)] = 0.5
+            elif abs(val - 1.0) < 1e-6:
+                result[(u, v)] = 1.0
+            else:
+                result[(u, v)] = val
+    
+    return result

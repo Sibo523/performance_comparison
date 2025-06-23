@@ -51,19 +51,13 @@ def run_one(n: int, p: float, time_cap: float = 60.0) -> dict[str, float | int]:
     t0 = time.perf_counter()
     frac_cmp = minimal_fraction_max_matching(G)
     cmp_time = time.perf_counter() - t0
-    cmp_val  = matching_value(frac_cmp)
-
-    # -------- fractional (LP) ----------
-    t0 = time.perf_counter()
-    frac_lp  = solve_fractional_matching_lp(G)
-    lp_time  = time.perf_counter() - t0
-    lp_val   = matching_value(frac_lp)
+    cmp_val = matching_value(frac_cmp)
 
     # -------- integral (greedy) ----------
     t0 = time.perf_counter()
-    greedy   = nx.maximal_matching(G)
-    gr_time  = time.perf_counter() - t0
-    gr_val   = len(greedy)
+    greedy = nx.maximal_matching(G)
+    gr_time = time.perf_counter() - t0
+    gr_val = len(greedy)
     
     # -------- C++ implementation ----------
     cpp_exe = pathlib.Path(project_root) / "algorithms" / "cpp_matching"
@@ -86,7 +80,7 @@ def run_one(n: int, p: float, time_cap: float = 60.0) -> dict[str, float | int]:
             )
             cpp_time = time.perf_counter() - t0
             
-            # Parse output (assuming the C++ program outputs the matching value)
+            # Parse output
             cpp_val = float(result.stdout.strip())
             log.info(f"C++ implementation: value={cpp_val}, time={cpp_time:.3f}s")
         except (subprocess.TimeoutExpired, ValueError, subprocess.CalledProcessError) as e:
@@ -96,16 +90,16 @@ def run_one(n: int, p: float, time_cap: float = 60.0) -> dict[str, float | int]:
         finally:
             os.unlink(graph_file)
     else:
-        log.warning("C++ executable not found at %s - skipping C++ benchmarks", cpp_exe)
+        log.warning("C++ executable not found at %s", cpp_exe)
         cpp_time = float('nan')
         cpp_val = float('nan')
 
+    # Make sure to include cpp_time and cpp_val in the result
     return dict(
         n=n, p=p,
         cmp_val=cmp_val, cmp_time=cmp_time,
-        lp_val=lp_val,  lp_time=lp_time,
-        gr_val=gr_val,   gr_time=gr_time,
-        cpp_val=cpp_val, cpp_time=cpp_time,
+        gr_val=gr_val, gr_time=gr_time,
+        cpp_val=cpp_val, cpp_time=cpp_time  # Ensure these are included
     )
 
 
@@ -122,6 +116,8 @@ def main():
                     help="independent trials per n")
     ap.add_argument("--time-cap", type=float, default=60.0,
                     help="stop when combinatorial algo exceeds this many seconds")
+    ap.add_argument("--skip-lp", action="store_true",
+                    help="Skip the LP implementation")
     args = ap.parse_args()
 
     rows: list[dict] = []
@@ -129,9 +125,8 @@ def main():
         for r in range(args.repeat):
             res = run_one(n, p=args.p, time_cap=args.time_cap)  # Pass time_cap here
             rows.append(res)
-            log.info("✓ n=%d rep=%d  cmp=%.3fs  lp=%.3fs  gr=%.3fs  cpp=%.3fs",
-                     n, r, res['cmp_time'], res['lp_time'], 
-                     res['gr_time'], res['cpp_time'])
+            log.info("✓ n=%d rep=%d  cmp=%.3fs  gr=%.3fs",
+                     n, r, res['cmp_time'], res['gr_time'])  # Remove lp_time reference
             
             # If we hit the time cap, break
             if res["cmp_time"] > args.time_cap:
