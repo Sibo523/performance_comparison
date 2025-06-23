@@ -98,7 +98,7 @@ ax_rt.set_title("RunTime/ amount of Vertices")
 ax_rt.grid(True, linestyle="--", linewidth=0.3)
 ax_rt.legend(framealpha=0.92)
 fig_rt.tight_layout()
-fig_rt.savefig(CSV.parent / "Runtime.png", dpi=150)
+fig_rt.savefig(CSV.parent / "Runtime2.png", dpi=150)
 plt.close(fig_rt)
 
 # ───────────────────────── value plot ─────────────────────────
@@ -117,7 +117,7 @@ ax_val.set_title("Matching Result")
 ax_val.grid(True, linestyle="--", linewidth=0.3)
 ax_val.legend(framealpha=0.92)
 fig_val.tight_layout()
-fig_val.savefig(CSV.parent / "MatchingResult.png", dpi=150)
+fig_val.savefig(CSV.parent / "MatchingResult2.png", dpi=150)
 plt.close(fig_val)
 
 log.info("Plots generated")

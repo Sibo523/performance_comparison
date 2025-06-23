@@ -31,7 +31,7 @@ def main():
         print("C++ compilation failed - C++ benchmarks will be skipped")
     
     # More reasonable graph sizes to approach 60 second cap without excessive runtime
-    sizes = "100 200 500 800 1200 1600"
+    sizes = "100 6000"
     p = 0.05
     repeat = 2
     time_cap = 60.0  # Ensure this matches the default in benchmark.py

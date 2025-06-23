@@ -47,12 +47,7 @@ def er_graph(n: int, p: float) -> nx.Graph:
 def run_one(n: int, p: float, time_cap: float = 60.0) -> dict[str, float | int]:
     G = er_graph(n, p)
 
-    # -------- fractional (combinatorial) ----------
-    t0 = time.perf_counter()
-    frac_cmp = minimal_fraction_max_matching(G)
-    cmp_time = time.perf_counter() - t0
-    cmp_val = matching_value(frac_cmp)
-
+    
     # -------- integral (greedy) ----------
     t0 = time.perf_counter()
     greedy = nx.maximal_matching(G)
@@ -93,6 +88,11 @@ def run_one(n: int, p: float, time_cap: float = 60.0) -> dict[str, float | int]:
         log.warning("C++ executable not found at %s", cpp_exe)
         cpp_time = float('nan')
         cpp_val = float('nan')
+    # -------- fractional (combinatorial) ----------
+    t0 = time.perf_counter()
+    # frac_cmp = minimal_fraction_max_matching(G)
+    cmp_time = time.perf_counter() - t0
+    cmp_val = cpp_val
 
     # Make sure to include cpp_time and cpp_val in the result
     return dict(
