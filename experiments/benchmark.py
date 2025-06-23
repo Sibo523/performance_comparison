@@ -1,6 +1,4 @@
 """
-benchmark.py  -  Section  performance driver
-
 • Generates Erdős-Rényi graphs G(n, p)
 • Runs:
     - minimal_fraction_max_matching  (combinatorial)
